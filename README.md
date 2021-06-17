@@ -1,17 +1,17 @@
 # foundry_swag_docker
+
+version 0.03 - Angel
+
 This is a how-to on running foundry-vtt in a docker container and securing the connection using nginx and letsencrypt. If that does not mean anything to you, this is basically a how to on running a reasonably secure version of foundry. It is: 
-**containered** - even if someone is able to hijack your foundry system through a vulnerability or by guessing your password, they cannot go any further. they're basically stuck in your container. It also has all sorts of portability and scalability advantages that do not really matter for your single home server.
-**encrypted** - the connection between your player's PC and your server is encrypted, which means that other users cannot easily steal your password or hijack your connection.
-**not idiot proof** - you may notice I use some carefull language. That is because, while I know this will make you more secure than doing nothing, there is no such thing as an unhackable system. So, please **choose a strong password** and **update your system**. Also, dont go arround daring other people to hack you. That's just stupid.
-
-
-version 0.02 - Aboleth
+- **containered** - even if someone is able to hijack your foundry system through a vulnerability or by guessing your password, they cannot go any further. they're basically stuck in your container. It also has all sorts of portability and scalability advantages that do not really matter for your single home server.
+- **encrypted** - the connection between your player's PC and your server is encrypted, which means that other users cannot easily steal your password or hijack your connection.
+- **not idiot proof** - you may notice I use some carefull language. That is because, while I know this will make you more secure than doing nothing, there is no such thing as an unhackable system. So, please **choose a strong password** and **update your system**. Also, dont go arround daring other people to hack you. That's just stupid.
 
 
 # Disclaimer
 * this guide is written by me, based on my own experience self-hosting foundryVTT. There are bound to be mistakes in this guide. Please contact me if I missed anything or if you feel this guide could be improved. Or, you know, make a pull request. this is github after all
 * Im assuming you have a passing familiarity with linux, the terminal and a rudimentary understanding of containers. I may forego or adjust this assumption in the future, but right now it is what it is. 
-* I'm assuming you own a licence key for foundry-vtt
+* I'm assuming you own a licence key for [foundry-vtt](https://foundryvtt.com/)
 * I'm assuming you have a static IPv4 adress. find out what your IP is easily using www.whatsmyip.org
 
 # Overview
@@ -39,16 +39,15 @@ the steps are :
 
 
 What this does is tell your provider that you would like to forward trafic for www.yourdomain.com and yourdomain.com to the ip address 100.100.100.1. The provider will the tell other DNS servers that whenever someone asks for the adresses you specified, they should forward likewise. Those providers tell other providers, etc. etc. This is called propagation. this is quite fast, but the internet is a big place, so it still takes a couple of hours before all DNS servers are aware of your new domain name. 
-* test that the domain forwards to the correct IP 
-  * go to www.mxtoolbox.com/DNSLookup.aspx 
-  * enter your domain name
-  * verify that it resolves to your IP address. If it doesnt, wait a bit and try again. 
+
 
 ### duckdns(the cheap and easy option)
 * create an account with duckdns.org
 * enter the domainname you want to register
 * duckdns will look up your public IP and fill that in. If it's incorrect for whatever reason, fill in the correct ip adress
-* test that the domain resolves to the correct IP
+
+### Test 
+test that the domain resolves to the correct IP
   * go to www.mxtoolbox.com/DNSLookup.aspx 
   * enter your domain name
   * verify that it resolves to your IP address. If it doesnt, wait a bit and try again. 
@@ -65,20 +64,26 @@ The biggest bottleneck for a smooth running game is for your server to serve all
 # setting up the host
 This is about configuring your host machine (which we discussed in the hardware selection section just now) to run your server. If this is not a NAS, I recommend doing a fresh install of your OS of choice. I assume this will be some sort of BSD or linux system; such as raspbian, debian, or perhaps proxmox or similar. I wont go into the details of doing this. The rest of this tutorial assumes you have debian installed (mostly because that's what I'm running).
 
+make a note of the ip address of you host. on debian type:
+
+    ip addr
+
+you will also need a way to access your host and the terminal. I assume you are familiar with ssh or [PuTTY](https://www.putty.org/), so I won't go into it here.  
+
 anyway, before we start, lets make sure everything is up to date:
 
     sudo apt update
     sudo apt upgrade
 
 
-## install docker
+## Install docker
 Docker has a really good install guide for multiple systems. 
 
 [guide for debian](https://docs.docker.com/engine/install/debian/)
 
 There are also some recommende [post-install steps.](https://docs.docker.com/engine/install/linux-postinstall/) I personally configure docker to be managed by  as a non-root user, and I configure docker to start on boot.  
 
-## (optional) install portainer
+## (optional) Install portainer
 Portainer is a container management system. It basically adds a web interface to docker and gives you some handy tools. You can absolutely do without. It just makes life that little bit easier. 
 
 As portainer itself runs in docker, deploying it is as simple as running two commands
@@ -102,25 +107,21 @@ This tells docker to start portainer. The variables are:
     -v portainer_data:/..    --> this maps (shares) the persistent volume you created to your container, so that your configurations remain persistent between restarts
     -e TZ='Europe/Amsterdam' --> set the timezone to where you live. You can change it to where you live. If you remove this part entirely, the container will default to UTC
     portainer/portainer      --> the name of the base image. Docker will look up this container on your host system, or download it from the docker repository if it is not present. 
-    
 
-Test if portainer is working by visiting http://<yourip>:9000
+Test if portainer is working by visiting http://yourip:9000
 
-you should see a registration screen:
-![portainer login](https://www.danielmartingonzalez.com/assets/posts/en/docker-and-portainer-in-debian/portainer-register.jpg)
-
+You should see a registration screen. register and press +create user
   
 next, chose the install type: LOCAL
-![configure install](https://www.danielmartingonzalez.com/assets/posts/en/docker-and-portainer-in-debian/portainer-initial-settings.jpg)
   
 you should see a dashboard
 --> click on local
 --> click on containers
 --> you should see 1 container active; you can inspect it using portainer, restart it, stop it or kill it (dont do those last two!).. oh, and maybe next time I should put the warning before the command that will destroy your pretty web interface...
-   
 
-## setting up a data folder for your containers
-It's a good idea to create a folder where you will store all your art assets in one easily searchable place. As your library will probaby grow (god knows it never shrinks), its a good idea to put some thought into the organsiation now, as its a pain to change it later.
+
+## Setting up a data folder for your resources
+It's a good idea to create a folder where you will store all your art assets in one easily searchable place. As your library will probaby grow (god knows it never shrinks), its a good idea to put some thought into the organsiation now, as its a pain to change it later. You can put this is your home directory (/home/user/resources) or anyplace else that makes sense for you. 
   
 I personally use a structure:
   
@@ -133,11 +134,74 @@ I personally use a structure:
 For the rest of the guide, I am assuming you hae a folder called resources that contains all this stuff. 
 
 # setting up foundry-vtt
-* chosing a foundry-vtt docker container
-* deploying the docker container
-* testing foundry
-* Updating 
+There is currently no official foundry-vtt container, but there are plenty of options created by fans. Which one is the best is going to vary over time. Have a look on [foundryvtt.com](https://foundryvtt.wiki/en/setup/hosting/Docker) for some o the more popular options. Two of my favorites:
+- https://hub.docker.com/r/felddy/foundryvtt is quite popular and seems easy to set-up and configure. If you go this route, mae sure you use secrets.json to store your  password and key 
+- https://github.com/BenjaminPrice/fvtt-docker (aka direckthit) strikes a  happy medium (for me) between convenience and security. basically, you download the zipfile yourself and a script in the container does the rest. No credentials to store, no credentials to accidentally leak.
+      
+for this guide, I'm using direckthit. 
 
+# deploying the container
+create a directory to store your game data. where you do this depends greatly on your system configuration. If you are using a raspberry pi, the best place may the your home directory. 
+            
+      mkdir -p ~/foundryvtt
+      cd ~/foundryvtt
+
+now is also a good time to download the foundryvtt-0.x.x.zip file and copy it into this directory
+      
+edit the configuration file
+      
+      nano docker-compose.yaml
+      
+If you are using portainer, instead of creating a docker-compose file, you can click on stacks (in the left menu) --> add stack and then copy the following text into the web editor. Give the stack a clear name, such as foundryvtt.
+      , 
+If you are not using portainer, copy the following into the empty docker-compose.yaml file.
+      
+      version: '3'
+      services:
+        foundryvtt:
+          image: direckthit/fvtt-docker:latest
+          container_name: foundryvtt
+          ports: 
+            - 30000:30000
+          volumes:
+            - /path/to/your/foundry/data/directory:/data/foundryvtt
+            - /path/to/your/resources:/data/foundryvtt/Data/resources
+            - /path/to/your/foundry/zip/file:/host
+          restart: unless-stopped
+
+
+in volumes, replace the following paths:
+* path/to/your/foundry/data/directory --> the directory you created for your persistent game data (probably /home/user/foundryvtt)
+* path/to/your/resources --> the directory you created for your resources. (probably /home/user/resources)
+* /path/to/your/foundry/zip/file --> the place where you stored foundryvtt-0.x.x.zip (probably /home/user/foundryvtt)
+
+save the docker-compose.yaml file.
+   
+If you are using portainer, click on 'deploy the stack' to finish the install. You should see the stack with the associated container up and running
+      
+if you are not using portainer, run:
+      
+      docker-compose up -d
+
+this will configure the container and run in detached or daemon mode.      
+      
+* testing foundry
+visit http://hostip:30000
+
+you should see a screen that asks for your registration key. If you are, you're done!
+      
+* Updating 
+updating foundry is done by stopping, removing and redeploying the stack. Before you do this, **shut down your game world.** you may want to create a backup as well. 
+      
+In portainer updating is done by copying the text from the web-editor, deleting the old stack and deploying a new stack. portainer v2.6 should allow you to do do this without a janky copy-paste, but it's not in the current version.
+
+without portainer, run     
+      
+      docker-compose rm --stop
+      docker-compose up -d      
+
+again **close your world** and **back up your data**
+      
 # setting up SWAG
 * configuring your router
 * configuring reverse proxy
