@@ -38,7 +38,7 @@ the steps are :
       @          A        your.ext.ip.adr     24H
 
 
-What this does is tell your provider that you would like to forward trafic for www.yourdomain.com and yourdomain.com to the ip address 100.100.100.1. The provider will the tell other DNS servers that whenever someone asks for the adresses you specified, they should forward likewise. Those providers tell other providers, etc. etc. This is called propagation. this is quite fast, but the internet is a big place, so it still takes a couple of hours before all DNS servers are aware of your new domain name. 
+What this does is tell your provider that you would like to forward trafic for www.yourdomain.com and yourdomain.com to the ip address your.ext.ip.adr (e.g 66.102.13.99). The provider will the tell other DNS servers that whenever someone asks for the adresses you specified, they should forward likewise. Those providers tell other providers, etc. etc. This is called propagation. this is quite fast, but the internet is a big place, so it still takes a couple of hours before all DNS servers are aware of your new domain name. 
 
 ### duckdns(the cheap and easy option)
 * create an account with duckdns.org
@@ -57,14 +57,15 @@ What you need is:
 * one or two core CPU's (anythng over 1Ghz will do)
 * 1GB ram
 * at least 1GB disk space
+
 In my experience, the biggest bottleneck for a smooth running game is for your server to serve all your assets quickly. Make sure you are using an SSD (so upgrade that if you are using old hardware), and have a good, wired connectiom. If you are going with a raspberry pi, make sure you it's a Pi 4B as you will want usb 3.0 and gigabit ethernet.
 
 # Setting up the host
 This is about configuring your host machine (which we discussed in the hardware selection section just now) as a server. If this is not a NAS, I recommend doing a fresh install of your OS of choice. I assume this will be some sort of BSD or Linux system; such as Raspbian, Debian, or perhaps Proxmox or similar. I won't go into the details of doing this. The rest of this tutorial assumes you have Debian installed (mostly because that's what I'm running).
 
 ###IP address
-make sure your host has a static IP address
-make a note of the ip address of you host. on Debian type:
+Make sure your host has a static IP address
+Make a note of the ip address of you host. on Debian type:
 
     ip addr
 
@@ -90,7 +91,7 @@ As portainer itself runs in docker, deploying it is as simple as running two com
 
      docker volume create portainer_data
 
-This creates a persistent place to store some of the container's data. Ususally containers will lose all data when you restart the container. This is a feature that makes containers more predictable and more secure. But sometimes you need certain data, such as config files to remain after you have restarted a container. That is where volumes come in. basically you are telling docker to reserve a place called portainer_data where this data can be stored.   
+This creates a persistent place to store some of the container's data. Ususally containers will lose all data when you restart the container. This is a feature that makes containers more predictable and more secure. But sometimes you need certain data, such as config files to remain after you have restarted a container. That is where volumes come in. Basically you are telling docker to reserve a place called portainer_data where this data can be stored.   
      
      docker run -d --name=Portainer --hostname=Portainer -p 8000:8000 -p 9000:9000 --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data -e TZ='Europe/Amsterdam' portainer/portainer
      
@@ -101,14 +102,14 @@ This tells docker to start portainer. The variables are:
     --name=Portainer         --> the name that docker uses to identify this container
     --hostname=Portainer     --> the name other computers use to identify this portainer on the network
     -p 8000:8000             --> map port 8000 on your host to the same port in the container. Port 8000 is used mostly for managing other portainer instances, so I'm not sure if you need this. 
-    -p 9000:9000             --> map port 9000 on your host to the same port in the container. This means that users that visit http://<yourip>:9000 will be served the portainer web interface. 
+    -p 9000:9000             --> map port 9000 on your host to the same port in the container. This means that users that visit http://<hostip>:9000 will be served the portainer web interface. 
     --restart=allways        --> allways restart (recover) the container after a crash.
     -v var/run/.....         --> this maps (shares) what is going on with docker on your host to the container. The container needs this to monitor and manage other containers on your network
     -v portainer_data:/..    --> this maps (shares) the persistent volume you created to your container, so that your configurations remain persistent between restarts
     -e TZ='Europe/Amsterdam' --> set the timezone to where you live. You can change it to where you live. If you remove this part entirely, the container will default to UTC
     portainer/portainer      --> the name of the base image. Docker will look up this container on your host system, or download it from the docker repository if it is not present. 
 
-Test if portainer is working by visiting http://yourip:9000
+Test if portainer is working by visiting http://hostip:9000
 
 You should see a registration screen. register and press +create user
   
@@ -186,7 +187,7 @@ If you are not using portainer, run:
 This will configure the container and run in detached or daemon mode.      
       
 ## Testing foundry
-visit http://hostip:30000
+visit https:/hostip/:30000
 
 You should see a screen that asks for your registration key. If you are, you're done!
       
@@ -297,7 +298,7 @@ You should add an entry for foundry:
 Add the following content to the file:
 
     upstream foundryvtt {
-        server yourip:30000;    # the server and port inside the network
+        server hostip:30000;    # the server and port inside the network
         }
 
     # only serve https
