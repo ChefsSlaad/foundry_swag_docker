@@ -1,5 +1,8 @@
 # foundry_swag_docker
 
+
+![foundry_swag_docker](foundry-docker-swag.png)
+
 version 0.05 - Ankheg
 
 This is a how-to on running foundry-vtt in a docker container and securing the connection using nginx and letsencrypt. If that does not mean anything to you, this is basically a how to on running a reasonably secure version of foundry. It is: 
