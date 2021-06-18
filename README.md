@@ -3,7 +3,7 @@
 
 ![foundry_swag_docker](foundry-docker-swag.png)
 
-version 0.05 - Ankheg
+version 0.06 - Ant
 
 This is a how-to on running foundry-vtt in a docker container and securing the connection using nginx and letsencrypt. If that does not mean anything to you, this is basically a how to on running a reasonably secure version of foundry. It is: 
 - **containered** - even if someone is able to hijack your foundry system through a vulnerability or by guessing your password, they cannot go any further. they're basically stuck in your container. It also has all sorts of portability and scalability advantages that do not really matter for your single home server.
@@ -12,7 +12,8 @@ This is a how-to on running foundry-vtt in a docker container and securing the c
 
 
 # Disclaimer
-* This guide is written by me, based on my own experience self-hosting foundryVTT. There are bound to be mistakes in this guide. Please contact me if I missed anything or if you feel this guide could be improved. Or, you know, make a pull request. this is Github after all
+* This guide is geared towards users who want to host foundry 24/7. That assumes you have a home server or some other dedicated hardware (even a raspberry pi) that player and the GM can always access from the internet. If you are only running foundry when you have a game, or if you only need your players to access the game from your LAN, this may be overkill. Then again, you're not paranoid if they're *really* out to get you.  
+* This guide is written by me, based on my own experience self-hosting foundryVTT. There are bound to be mistakes in this guide. Please contact me if I missed anything or if you feel this guide could be improved. Or, you know, make a pull request. this is Github after all.
 * I'm assuming you have a passing familiarity with Linux, the terminal and a rudimentary understanding of containers. I may forego or adjust this assumption in the future, but right now it is what it is. 
 * I'm assuming you own a licence key for [foundry-vtt](https://foundryvtt.com/)
 * I'm assuming you have a static IPv4 adress. find out what your IP is easily using www.whatsmyip.org
