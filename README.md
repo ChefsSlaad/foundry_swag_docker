@@ -3,7 +3,7 @@
 
 ![foundry_swag_docker](foundry-docker-swag.png)
 
-version 0.07 - Ape
+version 0.08 - Archon
 
 This is a how-to on running foundry-vtt on your home server 24/7 in a docker container and securing the connection using nginx and letsencrypt. If that does not mean anything to you, this is basically a how to on running a reasonably secure version of foundry. It is: 
 - **containered** - even if someone is able to hijack your foundry system through a vulnerability or by guessing your password, they cannot go any further. they're basically stuck in your container. It also has all sorts of portability and scalability advantages that do not really matter for your single home server.
@@ -17,6 +17,7 @@ This is a how-to on running foundry-vtt on your home server 24/7 in a docker con
 * I'm assuming you have a passing familiarity with Linux, the terminal and a rudimentary understanding of containers. I may forego or adjust this assumption in the future, but right now it is what it is. 
 * I'm assuming you own a licence key for [foundry-vtt](https://foundryvtt.com/)
 * I'm assuming you have a static IPv4 adress. find out what your IP is easily using www.whatsmyip.org
+* Actually, this will even work if you dont have a static IPv4 adress, as long as you use duckdns (see below)
 
 # Overview
 This guide is set up in 4 steps:
@@ -47,6 +48,7 @@ What this does is tell your provider that you would like to forward trafic for w
 * create an account with duckdns.org
 * enter the domainname you want to register
 * duckdns will look up your public IP and fill that in. If it's incorrect for whatever reason, fill in the correct ip adress
+* duckdns will also keep your IP updated if you dont have a fixed IP address. 
 
 ### Test 
 test that the domain resolves to the correct IP
@@ -66,7 +68,7 @@ In my experience, the biggest bottleneck for a smooth running game is for your s
 # Setting up the host
 This is about configuring your host machine (which we discussed in the hardware selection section just now) as a server. If this is not a NAS, I recommend doing a fresh install of your OS of choice. I assume this will be some sort of BSD or Linux system; such as Raspbian, Debian, or perhaps Proxmox or similar. I won't go into the details of doing this. The rest of this tutorial assumes you have Debian installed (mostly because that's what I'm running).
 
-###IP address
+### IP address
 Make sure your host has a static IP address
 Make a note of the ip address of you host. on Debian type:
 
@@ -85,43 +87,7 @@ Docker has a really good install guide for multiple systems.
 
 [guide for Debian](https://docs.docker.com/engine/install/debian/)
 
-There are also some recommende [post-install steps.](https://docs.docker.com/engine/install/linux-postinstall/) I personally configure docker to be managed by  as a non-root user, and I configure docker to start on boot.  
-
-## (optional) Install portainer
-Portainer is a container management system. It basically adds a web interface to docker and gives you some handy tools. You can absolutely do without. It just makes life that little bit easier. 
-
-As portainer itself runs in docker, deploying it is as simple as running two commands
-
-     docker volume create portainer_data
-
-This creates a persistent place to store some of the container's data. Ususally containers will lose all data when you restart the container. This is a feature that makes containers more predictable and more secure. But sometimes you need certain data, such as config files to remain after you have restarted a container. That is where volumes come in. Basically you are telling docker to reserve a place called portainer_data where this data can be stored.   
-     
-     docker run -d --name=Portainer --hostname=Portainer -p 8000:8000 -p 9000:9000 --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data -e TZ='Europe/Amsterdam' portainer/portainer-ce
-     
-This tells docker to start portainer. The variables are:
-
-    docker run               --> tell docker to run a container
-    -d                       --> run in daemon or detached mode. basically run in the background
-    --name=Portainer         --> the name that docker uses to identify this container
-    --hostname=Portainer     --> the name other computers use to identify this portainer on the network
-    -p 8000:8000             --> map port 8000 on your host to the same port in the container. Port 8000 is used mostly for managing other portainer instances, so I'm not sure if you need this. 
-    -p 9000:9000             --> map port 9000 on your host to the same port in the container. This means that users that visit http://<hostip>:9000 will be served the portainer web interface. 
-    --restart=allways        --> allways restart (recover) the container after a crash.
-    -v var/run/.....         --> this maps (shares) what is going on with docker on your host to the container. The container needs this to monitor and manage other containers on your network
-    -v portainer_data:/..    --> this maps (shares) the persistent volume you created to your container, so that your configurations remain persistent between restarts
-    -e TZ='Europe/Amsterdam' --> set the timezone to where you live. You can change it to where you live. If you remove this part entirely, the container will default to UTC
-    portainer/portainer-ce   --> the name of the base image. Docker will look up this container on your host system, or download it from the docker repository if it is not present. 
-
-Test if portainer is working by visiting http://hostip:9000
-
-You should see a registration screen. register and press +create user
-  
-next, chose the install type: LOCAL
-  
-you should see a dashboard
---> click on local
---> click on containers
---> you should see 1 container active; you can inspect it using portainer, restart it, stop it or kill it (dont do those last two!).. oh, and maybe next time I should put the warning before the command that will destroy your pretty web interface...
+There are also some recommended [post-install steps.](https://docs.docker.com/engine/install/linux-postinstall/) I personally configure docker to be managed by  as a non-root user, and I configure docker to start on boot.  
 
 
 ## Setting up a data folder for your resources
@@ -172,11 +138,12 @@ We are going to create a configuration file for docker that tells it how to run 
 
 copy the following into the file: 
 
+### using full domain name 
     version: "3.8"
 
     services:
-      foundry-test:
-        container_name: foundryvtt-test
+      foundry:
+        container_name: foundry
         hostname: foundry
         image: direckthit/fvtt-docker:latest
         expose:
@@ -188,8 +155,8 @@ copy the following into the file:
         restart: unless-stopped
       
 
-      swag-test:
-        image: ghcr.io/linuxserver/swag:latest
+      swag:
+        image: ghcr.io/linuxserver/swag
         container_name: swag
         cap_add:
           - NET_ADMIN
@@ -200,7 +167,54 @@ copy the following into the file:
           - URL=yourdomain.com   # replace with your domain name
           - SUBDOMAINS=www 
           - VALIDATION=http
-          - EMAIL=your.email@mail.com
+          - EMAIL=address@example.com #sdd your email address here (optional)
+        volumes:
+          - /path/to/your/swag/config:/config  # replace with the correct path to your swag config dir
+        ports:
+          - 80:80
+          - 443:443
+        restart: unless-stopped
+
+### using duckdns
+    version: "3.8"
+
+    services:
+      duckdns:
+        image: ghcr.io/linuxserver/duckdns
+        container_name: duckdns
+        environment:
+          - PUID=1000
+          - PGID=1000
+          - TZ=Europe/Amsterdam      # Change to your local timezone
+          - SUBDOMAINS=mysubdomain   # Change this to your DuckDNS subdomain name.
+          - TOKEN=blah-blah-blah     # Put your DuckDNS token here
+        restart: unless-stopped
+
+      foundry:
+        container_name: foundry
+        hostname: foundry
+        image: direckthit/fvtt-docker:latest
+        expose:
+          - 30000
+        volumes:
+          - path/to/your/foundry/data/directory:/data/foundryvtt     # replace with the correct path to your foundry config dir
+          - /path/to/your/resources:/data/foundryvtt/Data/resources  # replace with the correct path to your resources
+          - /path/to/your/foundry/zip/file:/host                     # replace with the correct path to your foundry-x.x.x.zip file
+        restart: unless-stopped
+
+      swag:
+        image: ghcr.io/linuxserver/swag
+        container_name: swag
+        cap_add:
+          - NET_ADMIN
+        environment:
+          - PUID=1000
+          - PGID=1000
+          - TZ=Europe/Amsterdam            # Change to your timezone
+          - URL=subdomain.duckdns.org      # change this to your DuckDNS hostname
+          - VALIDATION=http
+          - DUCKDNSTOKEN=blah-blah-blah    # Put your DuckDNS token here
+          - EMAIL=address@example.com      # Change to your email address (optional).
         volumes:
           - /path/to/your/swag/config:/config  # replace with the correct path to your swag config dir
         ports:
@@ -209,9 +223,11 @@ copy the following into the file:
         restart: unless-stopped
 
 
-In environment both cases you need to replace:
+
+In environment you need to replace:
 * TZ=Europe/Amsterdam --> enter your timezone here. 
-* url=yourdomain.com --> add your domain here. Do not add www to the url. That will be covered in the subdomains section
+* URL=yourdomain.com --> add your domain here. Do not add www to the url. That will be covered in the subdomains section. For duckdns add your full domain here. 
+* DUCKDNSTOKEN=blah-blah-blah --> the duckdns token on your duckdns page
 
 In volumes, replace the following paths:
 * /path/to/your/foundry/data/directory --> the directory you created for your persistent game data (probably /home/user/swag-foundry/foundry)
@@ -220,9 +236,7 @@ In volumes, replace the following paths:
 * /path/to/your/swag/config --> replace this with your config file. (probably /home/user/swag-foundry/swag)
 Save the docker-compose.yaml file.
    
-If you are using portainer, click on 'deploy the stack' to finish the install. You should see the stack with the associated container up and running
-      
-If you are not using portainer, run:
+run:
       
       docker-compose up -d
 
@@ -277,18 +291,13 @@ Restart swag, so that the new config is loaded.
 
     docker-compose restart
     
-Or in portainer go to the stack, select the container and the restart
-
-
 Verify everything works by going to www.yourdomain.com. You should see the foundry login screen.
 
 
 ## Updating 
 updating is done by stopping, removing and redeploying the stack. Before you do this, **shut down your game world.** you may want to **create a backup** as well. 
       
-In portainer updating is done by copying the text from the web-editor, deleting the old stack and deploying a new stack. portainer v2.6 should allow you to do do this without a janky copy-paste, but it's not in the current version.
-
-Without portainer, run     
+run     
       
       docker-compose rm --stop
       docker-compose up -d      
@@ -297,11 +306,50 @@ Again **close your world** and **back up your data**
       
 
 # Wrapping up
-Some things not covered here, but which may be usefull:
+Some things not covered here, but which may be useful:
 
 * **backups** make sure you backup your world regularly. I persoanlly have a script that creates a backup every morning using rsync. I may add a how-to later if people are interested
 * **searchable resources** Foundry's search function, quite frankly, sucks. My workarround is to have a seperate container running [piwigo](https://piwigo.com/) a free photo album (like google photo's) that allows me to search different photo's based on keywords. So if I'm looking for a chest, or a candle or a bridge to plop into my game I can easily do that.  
 * **HTTP Basic auth** an extra authentication step that limits people's access to your foundry server, even before they hit the logon screen. I may upgrade this to a best practice, but I want to test it out for myself first. A How-to guide can be found [here](https://docs.nginx.com/nginx/admin-guide/security-controls/configuring-http-basic-authentication/).
+* **portainer** portainer adds some features to docker that look good and may be helpful. This includes a web inteface and some cool tools to manage your containers. there's a short guide below:
+
+## (optional) Install portainer
+Portainer is a container management system. It basically adds a web interface to docker and gives you some handy tools. You can absolutely do without. It just makes life that little bit easier. 
+
+As portainer itself runs in docker, deploying it is as simple as running two commands
+
+     docker volume create portainer_data
+
+This creates a persistent place to store some of the container's data. Ususally containers will lose all data when you restart the container. This is a feature that makes containers more predictable and more secure. But sometimes you need certain data, such as config files to remain after you have restarted a container. That is where volumes come in. Basically you are telling docker to reserve a place called portainer_data where this data can be stored.   
+     
+     docker run -d --name=Portainer --hostname=Portainer -p 8000:8000 -p 9000:9000 --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data -e TZ='Europe/Amsterdam' portainer/portainer-ce
+     
+This tells docker to start portainer. The variables are:
+
+    docker run               --> tell docker to run a container
+    -d                       --> run in daemon or detached mode. basically run in the background
+    --name=Portainer         --> the name that docker uses to identify this container
+    --hostname=Portainer     --> the name other computers use to identify this portainer on the network
+    -p 8000:8000             --> map port 8000 on your host to the same port in the container. Port 8000 is used mostly for managing other portainer instances, so I'm not sure if you need this. 
+    -p 9000:9000             --> map port 9000 on your host to the same port in the container. This means that users that visit http://<hostip>:9000 will be served the portainer web interface. 
+    --restart=allways        --> allways restart (recover) the container after a crash.
+    -v var/run/.....         --> this maps (shares) what is going on with docker on your host to the container. The container needs this to monitor and manage other containers on your network
+    -v portainer_data:/..    --> this maps (shares) the persistent volume you created to your container, so that your configurations remain persistent between restarts
+    -e TZ='Europe/Amsterdam' --> set the timezone to where you live. You can change it to where you live. If you remove this part entirely, the container will default to UTC
+    portainer/portainer-ce   --> the name of the base image. Docker will look up this container on your host system, or download it from the docker repository if it is not present. 
+
+Test if portainer is working by visiting http://hostip:9000
+
+You should see a registration screen. register and press +create user
+  
+next, chose the install type: LOCAL
+  
+you should see a dashboard
+--> click on local
+--> click on containers
+--> you should see 1 container active; you can inspect it using portainer, restart it, stop it or kill it (dont do those last two!).. oh, and maybe next time I should put the warning before the command that will destroy your pretty web interface...
+
+
 
 
 # Thanks
