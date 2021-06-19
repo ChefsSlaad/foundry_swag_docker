@@ -3,12 +3,12 @@
 
 ![foundry_swag_docker](foundry-docker-swag.png)
 
-version 0.06 - Ant
+version 0.07 - Ape
 
 This is a how-to on running foundry-vtt on your home server 24/7 in a docker container and securing the connection using nginx and letsencrypt. If that does not mean anything to you, this is basically a how to on running a reasonably secure version of foundry. It is: 
 - **containered** - even if someone is able to hijack your foundry system through a vulnerability or by guessing your password, they cannot go any further. they're basically stuck in your container. It also has all sorts of portability and scalability advantages that do not really matter for your single home server.
 - **encrypted** - the connection between your player's PC and your server is encrypted, which means that other users cannot easily steal your password or hijack your connection.
-- **not idiot proof** - you may notice I use some careful language. That is because, while I know this will make you more secure than doing nothing, there is no such thing as an unhackable system. So, please **choose a strong password** and **update your system**. Also, don't go around daring other people to hack you. That's just stupid.
+- **not idiot proof** - you may notice I use some careful language. That is because, while I know this will make you more secure than doing nothing, there is no such thing as an unhackable system. So, please **choose a strong password**setting-up-foundry-vtt and **update your system**. Also, don't go around daring other people to hack you. That's just stupid.
 
 
 # Disclaimer
@@ -19,11 +19,10 @@ This is a how-to on running foundry-vtt on your home server 24/7 in a docker con
 * I'm assuming you have a static IPv4 adress. find out what your IP is easily using www.whatsmyip.org
 
 # Overview
-This guide is set up in 5 steps:
+This guide is set up in 4 steps:
 * [Preparations](#preparations)
 * [Setting up the host](#setting-up-the-host) (the system or server you will be using to run foundry vtt)
-* [Setting up the foundry-vtt container](#setting-up-foundry-vtt)
-* [Setting up the SWAG container](#setting-up-swag)
+* [Setting up the containers](#containers)
 * [Wrapping up](#wrapping-up)
 
 
@@ -138,48 +137,87 @@ I personally use a structure:
     
 For the rest of the guide, I am assuming you hae a folder called resources that contains all this stuff. 
 
-# Setting up foundry-vtt
+## setting up the folders for your containers
+Create a folder to store the the container data. Where is is depends on your system configuration. If you are using a raspberry pi, the best place may the your home directory. 
+            
+      mkdir -p ~/swag-foundry/foundry
+      mkdir -p ~/swag-foundry/swag
+      cd ~/swag-foundry
+      
+Now is also a good time to download the foundryvtt-0.x.x.zip file and copy it into this directory
+      
+## Configure your router
+You need to forward http and https trafic to your host. You do this by configuring your router to forward port 80 and port 443 trafic from WAN (the internet) to your host IP. Unfortunately, different routers do this is in different ways.  [This guide](https://www.noip.com/support/knowledgebase/general-port-forwarding-guide/) has some help for different brands of routers. 
+
+
+# Containers
+This section is going to be about selecting and configuring your containers. We are going to combine foundry and Swag into a single stack, with docker taking care of most of the plumbing, such as the networking between the containers. 
+
+## Preparing Foundry
 There is currently no official foundry-vtt container, but there are plenty of options created by fans. Which one is the best is going to vary over time. Have a look on [foundryvtt.com](https://foundryvtt.wiki/en/setup/hosting/Docker) for some o the more popular options. Two of my favorites:
-- https://hub.docker.com/r/felddy/foundryvtt is quite popular and seems easy to set-up and configure. If you go this route, mae sure you use secrets.json to store your  password and key 
+- https://hub.docker.com/r/felddy/foundryvtt is quite popular and seems easy to set-up and configure. If you go this route, mae sure you use secrets.json to store your password and key 
 - https://github.com/BenjaminPrice/fvtt-docker (aka direckthit) strikes a  happy medium (for me) between convenience and security. basically, you download the zipfile yourself and a script in the container does the rest. No credentials to store, no credentials to accidentally leak.
       
 for this guide, I'm using direckthit. 
 
-## Deploying the container
-create a directory to store your game data. where you do this depends greatly on your system configuration. If you are using a raspberry pi, the best place may the your home directory. 
-            
-      mkdir -p ~/foundryvtt
-      cd ~/foundryvtt
+## SWAG
+Linuxserver.io has made an excellent set of containers. I personally have a bunch of them running on my home server. One of the best ones is [SWAG](https://docs.linuxserver.io/general/swag), a container that combines Letsencrypt, nginx, a reverse proxy and fail2ban. Trust me, it's cool.   
 
-now is also a good time to download the foundryvtt-0.x.x.zip file and copy it into this directory
-      
-edit the configuration file
-      
-      nano docker-compose.yaml
-      
-If you are using portainer, instead of creating a docker-compose file, you can click on stacks (in the left menu) --> add stack and then copy the following text into the web editor. Give the stack a clear name, such as foundryvtt.
-      , 
-If you are not using portainer, copy the following into the empty docker-compose.yaml file.
-      
-      version: '3'
-      services:
-        foundryvtt:
-          image: direckthit/fvtt-docker:latest
-          container_name: foundryvtt
-          volumes:
-            - /path/to/your/foundry/data/directory:/data/foundryvtt
-            - /path/to/your/resources:/data/foundryvtt/Data/resources
-            - /path/to/your/foundry/zip/file:/host
-          ports: 
-            - 30000:30000
-          restart: unless-stopped
+What is does, handle your incoming connections and directs them to the correct server, while keeping the bad stuff out. 
 
+## Deploying the stack
+We are going to create a configuration file for docker that tells it how to run our swag/foundry stack:
+
+    nano docker-compose.yaml
+
+copy the following into the file: 
+
+    version: "3.8"
+
+    services:
+      foundry-test:
+        container_name: foundryvtt-test
+        hostname: foundry
+        image: direckthit/fvtt-docker:latest
+        expose:
+          - 30000
+        volumes:
+          - path/to/your/foundry/data/directory:/data/foundryvtt     # replace with the correct path to your foundry config dir
+          - /path/to/your/resources:/data/foundryvtt/Data/resources  # replace with the correct path to your resources
+          - /path/to/your/foundry/zip/file:/host                     # replace with the correct path to your foundry-x.x.x.zip file
+        restart: unless-stopped
+      
+
+      swag-test:
+        image: ghcr.io/linuxserver/swag:latest
+        container_name: swag
+        cap_add:
+          - NET_ADMIN
+        environment:
+          - PUID=1000
+          - PGID=1000
+          - TZ=Europe/Amsterdam # Change to your timezone
+          - URL=yourdomain.com   # replace with your domain name
+          - SUBDOMAINS=www 
+          - VALIDATION=http
+          - EMAIL=your.email@mail.com
+        volumes:
+          - /path/to/your/swag/config:/config  # replace with the correct path to your swag config dir
+        ports:
+          - 80:80
+          - 443:443
+        restart: unless-stopped
+
+
+In environment both cases you need to replace:
+* TZ=Europe/Amsterdam --> enter your timezone here. 
+* url=yourdomain.com --> add your domain here. Do not add www to the url. That will be covered in the subdomains section
 
 In volumes, replace the following paths:
-* path/to/your/foundry/data/directory --> the directory you created for your persistent game data (probably /home/user/foundryvtt)
-* path/to/your/resources --> the directory you created for your resources. (probably /home/user/resources)
-* /path/to/your/foundry/zip/file --> the place where you stored foundryvtt-0.x.x.zip (probably /home/user/foundryvtt)
-
+* /path/to/your/foundry/data/directory --> the directory you created for your persistent game data (probably /home/user/swag-foundry/foundry)
+* /path/to/your/resources --> the directory you created for your resources. (probably /home/user/resources)
+* /path/to/your/foundry/zip/file --> the place where you stored foundryvtt-0.x.x.zip (probably /home/user/swag-foundry)
+* /path/to/your/swag/config --> replace this with your config file. (probably /home/user/swag-foundry/swag)
 Save the docker-compose.yaml file.
    
 If you are using portainer, click on 'deploy the stack' to finish the install. You should see the stack with the associated container up and running
@@ -190,120 +228,17 @@ If you are not using portainer, run:
 
 This will configure the container and run in detached or daemon mode.      
       
-## Testing foundry
-visit https:/hostip/:30000
-
-You should see a screen that asks for your registration key. If you are, you're done!
-      
-## Updating 
-updating foundry is done by stopping, removing and redeploying the stack. Before you do this, **shut down your game world.** you may want to **create a backup** as well. 
-      
-In portainer updating is done by copying the text from the web-editor, deleting the old stack and deploying a new stack. portainer v2.6 should allow you to do do this without a janky copy-paste, but it's not in the current version.
-
-Without portainer, run     
-      
-      docker-compose rm --stop
-      docker-compose up -d      
-
-Again **close your world** and **back up your data**
-      
-# Setting up SWAG
-Linuxserver.io has made an excellent set of containers. I personally have a bunch of them running on my home server. One of the best ones is [SWAG](https://docs.linuxserver.io/general/swag), a container that combines Letsencrypt, nginx, a reverse proxy and fail2ban. Trust me, it's cool.   
-
-What is does, handle your incoming connections and directs them to the correct server, while keeping the bad stuff out. 
-
-## Configure your router
-You need to forward http and https trafic to your host. You do this by configuring your router to forward port 80 and port 443 trafic from WAN (the internet) to your host IP. Unfortunately, different routers do this is in different ways.  [This guide](https://www.noip.com/support/knowledgebase/general-port-forwarding-guide/) has some help for different brands of routers. 
-
-## deploy the SWAG container
-The swag docker-compose file is a bit more involved, but its fairly straigh forward when you get the hang of it. I recommend looking at the [documentation](https://docs.linuxserver.io/general/swag) for all the parameters.
-
-First create a folder where you can store the persistent data
-
-mkdir ~/swag
-
-The config file is different depending on the type of domain you have. I have added the files for both duckdns and an regular 2nd level domain. I believe e.g. cloudflare has some options that will make your config more easy, but I have no experience there. 
-
-### duckdns docker-compose.yaml:
-
-    version: "2.1"
-    services:
-      swag:
-        image: ghcr.io/linuxserver/swag
-        container_name: swag
-        cap_add:
-          - NET_ADMIN
-        environment:
-          - PUID=1000
-          - PGID=1000
-          - TZ=Europe/Amsterdam 
-          - URL=sudbdomain.duckdns.org #use your own url
-          - SUBDOMAINS=wildcard
-          - VALIDATION=duckdns
-          - DUCKDNSTOKEN=yourtoken #use the token on your duckdns page
-          - EMAIL=you@yourname #optional  
-        volumes:
-          - /path/to/config:/config
-        ports:
-          - 443:443
-          - 80:80
-        restart: unless-stopped
-
-### 2nd level domain docker-compose.yaml:
-
-    version: "2.1"
-    services:
-      swag:
-        image: linuxserver/swag
-        container_name: swag
-        cap_add:
-          - NET_ADMIN
-        environment: 
-          - PUID=1000
-          - PGID=1000
-          - TZ=Europe/Amsterdam
-          - URL=yoururl.com  #insert your domain name 
-          - SUBDOMAINS=www,
-          - VALIDATION=http
-          - EMAIL=you@yourname #optional  
-        volumes:
-           - /path/to/config:/config
-        ports:
-          - 443:443
-          - 80:80
-        restart: unless-stopped
-
-In both cases you need to configure 3 things:
-* TZ=Europe/Amsterdam --> enter your timezone here. 
-* url=yoururl.com --> add your url here. This can be either a duckdns url or a 2nd level domain. Do not add www to the url. That will be covered in the subdomains section
-* /path/to/config --> replace this with your config file. probably /home/user/swag
-
-If you are using portainer, go to stacks --> add stack and copy the config into the web editor.
-
-If you are not using portainer, create a file called docker-compose.yaml and paste the content into that file
-
-    cd ~/swag
-    nano docker-compose.yaml
-    
-Now let's start the container.    
-    
-    docker-compose up -d
-
 ## Configure reverse proxy
 
 Look into the swag config files.
 
-cd  ~/swag/config/nginx/site-confs/
+cd  ~/swag-foundry/swag/config/nginx/site-confs/
 
 You should add an entry for foundry:
 
     nano foundryvtt
 
 Add the following content to the file:
-
-    upstream foundryvtt {
-        server hostip:30000;    # the server and port inside the network
-        }
 
     # only serve https
     map $http_upgrade $connection_upgrade {
@@ -313,27 +248,28 @@ Add the following content to the file:
 
     server {
             listen 443 ssl http2;
-            server_name your_domain.com www.yourdomain.com;  #add your domain name here. if you want to use both with and without ww, add both here.
+            server_name yourdomain.com www.yourdomain.com;  #add your domain name here. if you want to use both with and without www add both here.
 
             # make sure ssl is enabled
             include /config/nginx/ssl.conf;
- 
+
             client_max_body_size 0;
-            add_header Strict-Transport-Security "max-age=31536000; includeSubdomains";
             ssl_session_cache shared:SSL:10m;
             proxy_buffering off;
- 
-            location / {
-                proxy_pass http://foundryvtt;    # Matches to the "upstream" name above
-                proxy_set_header Host $host;
-                proxy_redirect http:// https://;  # this stuff and the stuff below ensures that https is allways used, and the connection can't be downgraded to 'regular ol http'
-                proxy_http_version 1.1;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;  # for forcing password validation from outside
-                proxy_set_header Upgrade $http_upgrade;
-                proxy_set_header Connection $connection_upgrade;
 
-        }
+            location / {
+                include /config/nginx/proxy.conf;
+
+                resolver 127.0.0.11 valid=30s;
+
+                set $upstream_proto http;
+                set $upstream_app foundry;
+                set $upstream_port 30000;
+                proxy_pass $upstream_proto://$upstream_app:$upstream_port;
+                } 
     }
+
+
 
 Save and close.
 
@@ -347,13 +283,29 @@ Or in portainer go to the stack, select the container and the restart
 Verify everything works by going to www.yourdomain.com. You should see the foundry login screen.
 
 
+## Updating 
+updating is done by stopping, removing and redeploying the stack. Before you do this, **shut down your game world.** you may want to **create a backup** as well. 
+      
+In portainer updating is done by copying the text from the web-editor, deleting the old stack and deploying a new stack. portainer v2.6 should allow you to do do this without a janky copy-paste, but it's not in the current version.
+
+Without portainer, run     
+      
+      docker-compose rm --stop
+      docker-compose up -d      
+
+Again **close your world** and **back up your data**
+      
 
 # Wrapping up
 Some things not covered here, but which may be usefull:
 
 * **backups** make sure you backup your world regularly. I persoanlly have a script that creates a backup every morning using rsync. I may add a how-to later if people are interested
 * **searchable resources** Foundry's search function, quite frankly, sucks. My workarround is to have a seperate container running [piwigo](https://piwigo.com/) a free photo album (like google photo's) that allows me to search different photo's based on keywords. So if I'm looking for a chest, or a candle or a bridge to plop into my game I can easily do that.  
-* ...
+* **HTTP Basic auth** an extra authentication step that limits people's access to your foundry server, even before they hit the logon screen. I may upgrade this to a best practice, but I want to test it out for myself first. A How-to guide can be found [here](https://docs.nginx.com/nginx/admin-guide/security-controls/configuring-http-basic-authentication/).
+
+
+# Thanks
+Thank you to all the wonderfull people on reddit for helping me to improve this guide. Shout out specifically to u/PriorProject for his help on HSTS and HTTP basic and to u/WindyMiller2006 for his help on integrating SWAG and foundry into a single stack. 
 
 
 That's it. Happy gaming, and please give some feedback, either by raising an issue, or making a pull request. 
