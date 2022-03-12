@@ -13,11 +13,8 @@ This is a how-to on running [foundry-vtt](https://foundryvtt.com/) on your home 
 
 # Disclaimer
 * This guide is geared towards users who want to host foundry 24/7. That assumes you have a home server or some other dedicated hardware (even a raspberry pi) that player and the GM can always access from the internet. If you are only running foundry when you have a game, or if you only need your players to access the game from your LAN, this may be overkill. Then again, you're not paranoid if they're *really* out to get you.  
-* This guide is written by me, based on my own experience self-hosting foundryVTT. There are bound to be mistakes in this guide. Please contact me if I missed anything or if you feel this guide could be improved. Or, you know, make a pull request. this is Github after all.
-* I'm assuming you have a passing familiarity with Linux, the terminal and a rudimentary understanding of containers. I may forego or adjust this assumption in the future, but right now it is what it is. 
-* I'm assuming you own a licence key for [foundry-vtt](https://foundryvtt.com/)
-* I'm assuming you have a static IPv4 adress. find out what your IP is easily using www.whatsmyip.org
-* Actually, this will even work if you dont have a static IPv4 adress, as long as you use duckdns (see below)
+* This guide is written by me, based on my own experience self-hosting foundryVTT. There are bound to be mistakes in this guide. Please contact me if I missed anything or if you feel this guide could be improved. Or, you know, make a pull request. This is Github after all.
+* I'm assuming you have a passing familiarity with Linux, the terminal, and how a web server works in general. I may forego or adjust these assumptions in the future, but right now it is what it is. 
 
 # Overview
 This guide is set up in 4 steps:
@@ -28,7 +25,10 @@ This guide is set up in 4 steps:
 
 
 # Preparations
-The preparations are about making sure you have everything ready to install and run foundry. Besides the licence key and the static ip (which I assume you already have), you will also need a domain name, as that is what the letsencrypt ssl certificate is attached to.
+The preparations are about making sure you have everything ready to install and run foundry.
+
+## Getting Foundry-VTT
+Before you get started you'll need to have [bought foundry-vtt](https://foundryvtt.com/purchase/) and have received your license.
 
 ## Getting a domain name
 You basically have two choices: a fancy pansy full domain like `AgeOfWorms.com` or `TheCityOfSharn.org` (or whatever you campaign or setting is called), or a free subdomain like `mycampaign.duckdns.org`. The `.org`, `.com` and `.net` domains are paid and usually start at $8 per year, while duckdns.org is completely free. If you want a full domain name, shop arround a bit. Prices vary and sometimes you can get the domain at a discount. 
@@ -111,8 +111,14 @@ Create a folder to store the the container data. Where is is depends on your sys
       
 Download the foundryvtt-0.x.x.zip file and copy it into this directory
 
+## Set up a static IP address for the server
+You need to give the server hosting foundry a static IP address. The steps to do this will depend on your router, but are generalised [in this guide](https://au.pcmag.com/networking/65062/how-to-set-up-a-static-ip-address). This ensures your router always gives the host machine the same IP and you don't have to update port forwarding rules.
+
+Make a note of the ip address of your host. If you are using Debian run:
+
+    ip addr
       
-## Configure your router
+## Set up Port Forwarding
 You need to forward http and https trafic to your host. You do this by configuring your router to forward port 80 and port 443 trafic from WAN (the internet) to your host IP. Unfortunately, different routers do this is in different ways.  [This guide](https://www.noip.com/support/knowledgebase/general-port-forwarding-guide/) has some help for different brands of routers. 
 
 
