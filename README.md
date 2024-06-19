@@ -147,11 +147,11 @@ Create a folder to store the container data. Where it should go depends on your 
       
 
 ## Get a timed url
-go to https://foundryvtt.com/community/chefsslaad/licenses, select Linux/NodeJS under Operating system and click **timed url** 
+go to https://foundryvtt.com/community/me/licenses, select Linux/NodeJS under Operating system and click **timed url** 
 a temporary url file will be copied to your clipboard.
 
-### *note*, 
-the next steps may take more time than you have for your timed url. Dont worry about it. you can request a new timed url as often as you like. Just keep the tab open and be ready to copy it again when needed. 
+*note* 
+the next steps may take more time than you have for your timed url. Dont worry about it. You can request a new timed url as often as you like. Just keep the tab open and be ready to copy it again when needed. 
 
 
 ## Deploy the stack
@@ -319,8 +319,9 @@ Verify everything works by going to www.yourdomain.com. You should see the found
 Updating is done by stopping, removing and redeploying the stack. Before you do this, **shut down your game world.** You may want to **create a backup** as well. 
 to update your server, you will need to get a new timed url and replace the existing one in docker-compose.yaml
 
-see: [Get a timed url](#get-a-timed-url)
-     [Deploy the stack](#deploy-the-stack)
+see: 
+* [Get a timed url](#get-a-timed-url)
+* [Deploy the stack](#deploy-the-stack)
 
       
 Run:
