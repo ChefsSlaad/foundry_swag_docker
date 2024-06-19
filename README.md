@@ -130,7 +130,8 @@ There is currently no official foundry-vtt container, but there are plenty of op
 - https://hub.docker.com/r/felddy/foundryvtt is quite popular and seems easy to set-up and configure. If you go this route, make sure you use `secrets.json` to store your password and key 
 - https://github.com/BenjaminPrice/fvtt-docker (aka direckthit) strikes a happy medium (for me) between convenience and security. Basically, you download the zipfile yourself and a script in the container does the rest. No credentials to store, no credentials to accidentally leak.
       
-For this guide, I'm using direckthit. 
+For this guide, I'm using felddy. 
+
 
 ## SWAG
 Linuxserver.io has made an excellent set of containers. I personally have a bunch of them running on my home server. One of the best ones is [SWAG](https://docs.linuxserver.io/general/swag), a container that combines Letsencrypt, nginx, a reverse proxy and fail2ban. Trust me, it's cool.   
@@ -144,9 +145,16 @@ Create a folder to store the container data. Where it should go depends on your 
       mkdir -p ~/swag-foundry/swag
       cd ~/swag-foundry
       
-Download the foundryvtt-0.x.x.zip file and copy it into this directory
 
-## Deploying the stack
+## Get a timed url
+go to https://foundryvtt.com/community/chefsslaad/licenses, select Linux/NodeJS under Operating system and click **timed url** 
+a temporary url file will be copied to your clipboard.
+
+### *note*, 
+the next steps may take more time than you have for your timed url. Dont worry about it. you can request a new timed url as often as you like. Just keep the tab open and be ready to copy it again when needed. 
+
+
+## Deploy the stack
 We are going to create a configuration file for docker that tells it how to run our swag/foundry stack:
 
     nano docker-compose.yaml
@@ -161,13 +169,14 @@ services:
   foundry:
     container_name: foundry
     hostname: foundry
-    image: direckthit/fvtt-docker:latest
+    image: felddy/foundryvtt:release
+    environment:
+      - FOUNDRY_RELEASE_URL=<timed_url>                          # replace with the timed url you copied earlier
     expose:
       - 30000
     volumes:
       - path/to/your/foundry/data/directory:/data/foundryvtt     # replace with the correct path to your foundry config dir
       - /path/to/your/resources:/data/foundryvtt/Data/resources  # replace with the correct path to your resources
-      - /path/to/your/foundry/zip/file:/host                     # replace with the correct path to your foundry-x.x.x.zip file
     restart: unless-stopped
   
 
@@ -211,7 +220,9 @@ services:
   foundry:
     container_name: foundry
     hostname: foundry
-    image: direckthit/fvtt-docker:latest
+    image: felddy/foundryvtt:release
+    environment:
+      - FOUNDRY_RELEASE_URL=<timed_url>                          # replace with the timed url you copied earlier
     expose:
       - 30000
     volumes:
@@ -242,6 +253,7 @@ services:
 ```
 
 Modify the config on each line where there is a `# replace with` comment.
+this is also where you need the **timed_url** you copied to your clipboard. 
 Save the docker-compose.yaml file.
    
 run:
@@ -305,10 +317,22 @@ Verify everything works by going to www.yourdomain.com. You should see the found
 
 ## Updating 
 Updating is done by stopping, removing and redeploying the stack. Before you do this, **shut down your game world.** You may want to **create a backup** as well. 
+to update your server, you will need to get a new timed url and replace the existing one in docker-compose.yaml
+
+see: [Get a timed url](#get-a-timed-url)
+     [Deploy the stack](#deploy-the-stack)
+
       
 Run:
-      
+
+      cd ~/swag-foundry
       docker-compose rm --stop
+      nano docker-compose.yaml    
+
+edit the file
+
+now restart your containers
+
       docker-compose up -d      
 
 Again **close your world** and **back up your data**
@@ -318,7 +342,8 @@ Again **close your world** and **back up your data**
 Some things not covered here, but which may be useful:
 
 * **backups** make sure you backup your world regularly. I personally have a script that creates a backup every morning using rsync. I may add a how-to later if people are interested
-* **searchable resources** Foundry's search function, quite frankly, sucks. My workaround is to have a separate container running [piwigo](https://piwigo.com/) which is a free photo album (like google photos) that allows me to search different photos based on keywords. So if I'm looking for a chest, or a candle or a bridge to plop into my game I can easily do that.  
+* **extra options in felddy's docker container** this guide is long enough as it is. however, Felddy has added a great number of options to run scripts, configure your server, have a certain world be ready, even a custom login screen. Check out his options [here](https://github.com/felddy/foundryvtt-docker) 
+* **searchable resources** Foundry's search function, quite frankly, sucks. My workaround is to have a separate container running [pigallery](https://github.com/bpatrik/pigallery2) which is a free photo album (like google photos) that allows me to search different photos based on keywords. So if I'm looking for a chest, or a candle or a bridge to plop into my game I can easily do that.  
 * **HTTP Basic auth** an extra authentication step that limits people's access to your foundry server, even before they hit the logon screen. I may upgrade this to a best practice, but I want to test it out for myself first. A How-to guide can be found [here](https://docs.nginx.com/nginx/admin-guide/security-controls/configuring-http-basic-authentication/).
 * **portainer** portainer adds some features to docker that look good and may be helpful. This includes a web interface and some cool tools to manage your containers. There's a short guide below:
 
