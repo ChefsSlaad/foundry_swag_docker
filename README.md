@@ -269,7 +269,7 @@ Look into the swag config files.
 
 You should add an entry for foundry:
 
-    nano foundryvtt
+    nano foundryvtt.conf
 
 Add the following content to the file:
 
