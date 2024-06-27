@@ -172,8 +172,8 @@ services:
     image: felddy/foundryvtt:release
     environment:
       - FOUNDRY_RELEASE_URL=<timed_url>                          # replace with the timed url you copied earlier
-    expose:
-      - 30000
+    ports:
+      - 30000:30000
     volumes:
       - path/to/your/foundry/data/directory:/data/foundryvtt     # replace with the correct path to your foundry config dir
       - /path/to/your/resources:/data/foundryvtt/Data/resources  # replace with the correct path to your resources
@@ -194,7 +194,7 @@ services:
       - VALIDATION=http
       - EMAIL=address@example.com                               # replace with your email address here (optional)
     volumes:
-      - ./swag-config:/config                       # replace with the correct path to your swag config dir
+      - /path/to/your/swag/directory:/config                       # replace with the correct path to your swag config dir
     ports:
       - 80:80
       - 443:443
@@ -223,12 +223,11 @@ services:
     image: felddy/foundryvtt:release
     environment:
       - FOUNDRY_RELEASE_URL=<timed_url>                          # replace with the timed url you copied earlier
-    expose:
-      - 30000
+    ports:
+      - 30000:30000
     volumes:
-      - path/to/your/foundry/data/directory:/data/foundryvtt     # replace with the correct path to your foundry config dir
+      - /path/to/your/foundry/data/directory:/data/foundryvtt     # replace with the correct path to your foundry config dir
       - /path/to/your/resources:/data/foundryvtt/Data/resources  # replace with the correct path to your resources
-      - /path/to/your/foundry/zip/file:/host                     # replace with the correct path to your foundry-x.x.x.zip file
     restart: unless-stopped
 
   swag:
@@ -245,7 +244,7 @@ services:
       - DUCKDNSTOKEN=blah-blah-blah                             # replace with your DuckDNS token here
       - EMAIL=address@example.com                               # replace with your email address (optional).
     volumes:
-      - ./swag:/config
+      - /path/to/your/swag/directory:/config                    # replace with the correct path to your resources
     ports:
       - 80:80
       - 443:443
